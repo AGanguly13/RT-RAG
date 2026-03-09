@@ -128,7 +128,7 @@ def main():
     overlap = config.overlap
     raw_path = config.raw_path
     save_path = config.save_path
-    index_name = f"{dataset_name}_chunk{chunk_size}_{min_sentence}_{overlap}"
+    index_name = f"{dataset_name}_chunk{chunk_size}_{min_sentence}_{overlap}_index"
     vector_store_path = f"{save_path}/{index_name}"
     file_path=f"{raw_path}/{dataset_name}.json"
     print(f"\nProcessing dataset: {dataset_name}")

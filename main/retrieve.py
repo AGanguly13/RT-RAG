@@ -4,21 +4,42 @@ import uuid
 import numpy as np
 import json
 import math
+import pickle
 from typing import List, Dict, Tuple, Any
 import spacy
 from datetime import datetime
 import requests
-# from elasticsearch import Elasticsearch
 from openai import OpenAI
 import argparse
-import faiss
-import torch
-from config import BASE_URL,API_KEY,RANKER_URL,RANKER_KEY,RETRIEVE_TEMPERATURE,SAMPLING_ITERATIONS,EMBEDDING_DATA
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-global_tokenizer = AutoTokenizer.from_pretrained('BAAI/bge-reranker-base')
-global_model = AutoModelForSequenceClassification.from_pretrained('BAAI/bge-reranker-base').to(device)
-global_model.eval()
+from config import BASE_URL,API_KEY,RANKER_URL,RANKER_KEY,RETRIEVE_TEMPERATURE,SAMPLING_ITERATIONS,EMBEDDING_DATA,MODEL_NAME,METHOD
+
+_bm25_cache: dict = {}
+
+def _load_bm25_index(base_path: str):
+    """Load and cache the local BM25 index + chunks from disk."""
+    if base_path in _bm25_cache:
+        return _bm25_cache[base_path]
+
+    with open(os.path.join(base_path, "bm25_index.pkl"), "rb") as f:
+        bm25 = pickle.load(f)
+    with open(os.path.join(base_path, "chunks.json"), "r", encoding="utf-8") as f:
+        chunks = json.load(f)
+
+    _bm25_cache[base_path] = (bm25, chunks)
+    print(f"Loaded BM25 index from {base_path} ({len(chunks)} chunks)")
+    return bm25, chunks
+
+if METHOD.lower() == "dense":
+    import torch
+    import faiss
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    global_tokenizer = AutoTokenizer.from_pretrained('BAAI/bge-reranker-base')
+    global_model = AutoModelForSequenceClassification.from_pretrained('BAAI/bge-reranker-base').to(device)
+    global_model.eval()
+else:
+    global_tokenizer = None
+    global_model = None
 
 client = OpenAI(base_url=BASE_URL, api_key=API_KEY)
 try:
@@ -34,7 +55,7 @@ def generate_response(messages, max_tokens=2000, temperature=0, top_p=1.0, top_k
     try:
       
         params = {
-            "model": "gpt-4o-mini", 
+            "model": MODEL_NAME,
             "messages": messages,
             "max_tokens": max_tokens,
             "temperature": temperature,
@@ -299,61 +320,33 @@ def retrieve_and_rerank_chunks(dataset: str, query: str, chunk_size: int = 200, 
         print(f"Dense retrieval failed: {e}")
         return []
 
-# Search using Elasticsearch BM25
 def search_with_bm25(query, dataset, chunk_size, min_sentence, overlap, top_k):
-    """Search documents from Elasticsearch index using BM25"""
-    # Build index name
-    index_name = f"{dataset}_chunk{chunk_size}_{min_sentence}_{overlap}"
-    
-    # Connect to Elasticsearch
-    es = Elasticsearch(['localhost:9200'], timeout=100)
-    
-    # Check connection
-    if not es.ping():
-        raise ValueError("Unable to connect to Elasticsearch, please ensure Elasticsearch service is running")
-    
-    # Prepare search query
-    search_body = {
-        "size": top_k,
-        "query": {
-            "multi_match": {
-                "query": query,
-                "fields": ["title", "text"],
-                "type": "best_fields",
-                "tie_breaker": 0.3
-            }
-        }
-    }
-    
-    # Execute search
-    print(f"Searching in index '{index_name}' for: '{query}'")
+    """Search documents using a local BM25 index (rank_bm25). No Elasticsearch needed."""
+    base_path = f"{EMBEDDING_DATA}/{dataset}/{chunk_size}_{min_sentence}_{overlap}"
+
     try:
-        response = es.search(index=index_name, body=search_body)
-    except Exception as e:
-        print(f"Elasticsearch search failed: {e}")
+        bm25, chunks = _load_bm25_index(base_path)
+    except FileNotFoundError:
+        print(f"BM25 index not found at {base_path}. Run build_bm25_index.py first.")
         return []
-    
-    # Process results
-    hits = response['hits']['hits']
-    if not hits:
-        print("No matching documents found")
-        return []
-    
+
+    tokenized_query = re.findall(r"\w+", query.lower())
+    scores = bm25.get_scores(tokenized_query)
+
+    top_indices = np.argsort(scores)[::-1][:top_k]
+
     results = []
-    for i, hit in enumerate(hits):
-        doc = hit['_source']
-        score = hit['_score']
-        doc_id = hit['_id']
-        
-        result = {
-            'rank': i + 1,
-            'id': doc_id,
-            'score': score,
-            'title': doc.get('title', 'No title'),
-            'text': doc.get('text', 'No content'),
-        }
-        results.append(result)
-    
+    for rank, idx in enumerate(top_indices, 1):
+        if scores[idx] <= 0:
+            break
+        results.append({
+            "rank": rank,
+            "id": str(idx),
+            "score": float(scores[idx]),
+            "title": "",
+            "text": chunks[idx],
+        })
+
     return results
 
 # Unified retrieval interface

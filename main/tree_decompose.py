@@ -11,7 +11,7 @@ from collections import Counter, defaultdict
 from openai import OpenAI
 from retrieve import answer_question, direct_answer
 
-from config import  DATASET, METHOD, CHUNK_SIZE, MIN_SENTENCE, OVERLAP, TOPK1, TOPK2, MAX_ITERATIONS, BASE_URL, API_KEY, TREES_PER_QUESTION, MAX_TOKENS,                        DECOMPOSE_TEMPERATURE, TOP_P,FREQUENCY_PENALTY, PRESENCE_PENALTY, NUM_EXAMPLES, MAX_HEIGHT, RIGHT_SUBTREE_VARIANTS, RIGHT_SUBTREE_TREES_PER_VARIANT, MAX_VARIANTS, STATS_FILE_PATH,ENHANCED_RIGHT_SUBTREE
+from config import  DATASET, METHOD, CHUNK_SIZE, MIN_SENTENCE, OVERLAP, TOPK1, TOPK2, MAX_ITERATIONS, BASE_URL, API_KEY, MODEL_NAME, TREES_PER_QUESTION, MAX_TOKENS,                        DECOMPOSE_TEMPERATURE, TOP_P,FREQUENCY_PENALTY, PRESENCE_PENALTY, NUM_EXAMPLES, MAX_HEIGHT, RIGHT_SUBTREE_VARIANTS, RIGHT_SUBTREE_TREES_PER_VARIANT, MAX_VARIANTS, STATS_FILE_PATH,ENHANCED_RIGHT_SUBTREE
 client = OpenAI(base_url=BASE_URL, api_key=API_KEY)
 import os
 import datetime
@@ -52,9 +52,9 @@ def save_tree_stats(question, answer, original_height, final_height, file_path, 
 
 def generate_response(messages, max_tokens=800, temperature=0.2, top_p=1.0, frequency_penalty=0.0, presence_penalty=0.0):
     """Generic API call function to replace original requests.post call"""
-    try:#"Qwen/Qwen2.5-14B-Instruct"
+    try:
         completion = client.chat.completions.create(
-            model="gpt-4o-mini",  # Can be changed as needed
+            model=MODEL_NAME,
             messages=messages,
             max_tokens=max_tokens,
             temperature=temperature,

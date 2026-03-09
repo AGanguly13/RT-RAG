@@ -1,25 +1,17 @@
 # config.py
+import os
 
-# Path to the directory containing the original raw dataset JSON files
-raw_path = "/path/to/your/raw/data"
+_project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-# Path where processed chunks, FAISS index, and config files will be saved
-save_path = "/path/to/save/embedding/results"
+raw_path = os.path.join(_project_root, "main", "raw")
+save_path = os.path.join(_project_root, "embedding_data", "wiki_psgs", "200_2_2")
 
-# Base URL of the OpenAI-compatible API endpoint
-base_url = "/path/to/your/base/url"
+# OpenAI-compatible embedding API (e.g. vLLM with text-embedding-3-small or local endpoint)
+base_url = "http://localhost:8001/v1"
+api_key = "token-placeholder"
 
-# Your OpenAI API key (keep this secure)
-api_key = "your-api-key"
+dataset_name = "wiki_psgs"
 
-# Name of the dataset file (without .json extension)
-dataset_name = "2wikimultihopqa"#2wikimultihopqa/hotpotqamusique
-
-# Maximum number of words per chunk
 chunk_size = 200
-
-# Minimum number of sentences required in each chunk
 min_sentence = 2
-
-# Number of overlapping sentences between consecutive chunks
 overlap = 2

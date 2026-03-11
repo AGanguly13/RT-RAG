@@ -20,9 +20,28 @@ chunk_size = config.CHUNK_SIZE
 topk1 = config.TOPK1
 topk2 = config.TOPK2
 method = config.METHOD
+final_answer_max_tokens = config.MAX_NEW_TOKENS_FINAL_ANSWER
 
 # Dynamically construct output directory
 output_dir = os.path.join(output_dir_root, dataset_name, f"{method}_chunk{chunk_size}_topk1_{topk1}_topk2_{topk2}")
+
+# Cap final predicted answer length (whitespace tokens)
+def cap_final_answer(answer: str) -> str:
+    if answer is None:
+        return ""
+    s = str(answer).strip()
+    if final_answer_max_tokens is None:
+        return s
+    try:
+        n = int(final_answer_max_tokens)
+    except Exception:
+        return s
+    if n <= 0:
+        return s
+    toks = s.split()
+    if len(toks) <= n:
+        return s
+    return " ".join(toks[:n])
 
 # Determine next available file name (1.txt, 2.txt, 3.txt, etc.)
 def get_next_available_file(output_dir):
@@ -86,6 +105,8 @@ async def process_example(example, idx):
             if "Error" in predicted_answer:
                 print(f"Detected error: {predicted_answer}, retrying question: {qid}")
                 return await process_example(example, idx)  # Retry recursively
+
+            predicted_answer = cap_final_answer(predicted_answer)
 
             result = {
                 "qid": qid,

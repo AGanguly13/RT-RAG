@@ -1,16 +1,16 @@
 # Tree generation parameters for hierarchical QA
-TREES_PER_QUESTION = 3           # Number of trees to generate per question (for consensus-based QA)
+TREES_PER_QUESTION = 4           # Number of trees to generate per question (for consensus-based QA)
 MAX_TOKENS = 2000                # Maximum number of tokens allowed per tree
 DECOMPOSE_TEMPERATURE = 0.8
 TOP_P = 1.0
 FREQUENCY_PENALTY = 0.0
 PRESENCE_PENALTY = 0.0
 NUM_EXAMPLES = 25                # Number of few-shot examples
-MAX_HEIGHT = 3                   # Maximum depth of the generated tree (was 4)
+MAX_HEIGHT = 4                   # Maximum depth of the generated tree (was 4)
 ENHANCED_RIGHT_SUBTREE = True
 RIGHT_SUBTREE_VARIANTS = 1
-RIGHT_SUBTREE_TREES_PER_VARIANT = 3
-MAX_VARIANTS = 2
+RIGHT_SUBTREE_TREES_PER_VARIANT = 5
+MAX_VARIANTS = 4
 
 # Final output control (for fair comparisons vs vanilla baselines)
 # Caps only the *final predicted answer string* written to outputs,
@@ -21,7 +21,7 @@ MAX_NEW_TOKENS_FINAL_ANSWER = 32
 STATS_FILE_PATH = "outputs/tree_stats.txt"
 
 # LLM model name (used for all generate_response calls)
-MODEL_NAME = "Qwen/Qwen2.5-1.5B-Instruct"
+MODEL_NAME = "Qwen/Qwen2.5-7B-Instruct"
 
 # OpenAI-compatible language model API settings
 BASE_URL = "http://localhost:8000/v1"
@@ -50,7 +50,7 @@ MAX_ITERATIONS = 3              # Maximum number of iterations for query rewriti
 OUTPUT_DIR_ROOT = "outputs"
 
 # Concurrency control
-MAX_CONCURRENT = 16             # Maximum number of concurrent QA jobs (bump if vLLM handles more)
+MAX_CONCURRENT = 32             # Maximum number of concurrent QA jobs (bump if vLLM handles more)
 
 # Path to evaluation dataset (in .jsonl format)
 DATA_PATH = "main/data/hotpotqa_dev_1k.jsonl"

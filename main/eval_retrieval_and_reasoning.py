@@ -236,13 +236,22 @@ def main():
         default=10,
         help="k for Recall@k (retrieval).",
     )
+    parser.add_argument(
+        "--skip-retrieval",
+        action="store_true",
+        help="Skip retrieval eval (avoids loading the large corpus JSON into RAM).",
+    )
     args = parser.parse_args()
 
-    eval_retrieval(
-        hotpot_path=args.hotpot_path,
-        raw_corpus_path=args.raw_corpus_path,
-        k=args.k,
-    )
+    if not args.skip_retrieval:
+        eval_retrieval(
+            hotpot_path=args.hotpot_path,
+            raw_corpus_path=args.raw_corpus_path,
+            k=args.k,
+        )
+    else:
+        print("Skipping retrieval evaluation (--skip-retrieval).")
+
     eval_reasoning_supports(
         hotpot_path=args.hotpot_path,
         result_file=args.results_file,
